@@ -1,0 +1,179 @@
+
+================================================================================
+Class: WallhavenGUI
+================================================================================
+
+
+------------------------------------------------------------
+Name: browse_folder
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'initial_dir', 'folder')
+  - Constants: ('浏览文件夹', '选择保存位置', ('title', 'initialdir'), 'end', None)
+
+------------------------------------------------------------
+Name: build_ui
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'title_label', 'input_frame', 'keyword_label', 'count_label', 'path_label', 'path_container', 'browse_btn', 'category_label', 'category_container', 'purity_label', 'purity_container', 'api_key_label', 'api_key_container', 'save_api_btn', 'control_frame', 'split_frame', 'left_frame', 'log_label', 'right_frame', 'preview_label', 'preview_control_frame')
+  - Cannot extract code: 'gbk' codec can't encode character '\U0001f5bc' in position 27: illegal multibyte sequence
+
+------------------------------------------------------------
+Name: load_last_config
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'config', 'api_key')
+  - Constants: ('加载上次保存的配置', 'keyword', 'count', 'save_path', 'category_general', True, 'category_anime', 'category_people', False, 'purity_sfw')
+
+------------------------------------------------------------
+Name: log_message
+Type: <class 'function'>
+Signature: (self, message)
+Code info:
+  - Arguments: ('self', 'message')
+  - Local vars: ('self', 'message')
+  - Constants: ('在日志区域显示消息（线程安全）', None)
+
+------------------------------------------------------------
+Name: run
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self',)
+  - Constants: ('运行主循环', None)
+
+------------------------------------------------------------
+Name: save_current_config
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'keyword', 'count', 'save_path', 'category_general', 'category_anime', 'category_people', 'purity_sfw', 'purity_sketchy', 'purity_nsfw', 'api_key')
+  - Cannot extract code: 'gbk' codec can't encode character '\U0001f4be' in position 27: illegal multibyte sequence
+
+------------------------------------------------------------
+Name: show_current_image
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'metadata', 'current_meta', 'thumb_url', 'index', 'total', 'photo')
+  - Constants: ('显示当前索引的图片（使用缩略图）', None, 'thumb', '', 'index', '正在预览：第 ', '/', ' 张', ('text',), ('image', 'text'))
+
+------------------------------------------------------------
+Name: show_next_image
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self',)
+  - Constants: ('显示下一张图片', None)
+
+------------------------------------------------------------
+Name: show_previous_image
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self',)
+  - Constants: ('显示上一张图片', None)
+
+------------------------------------------------------------
+Name: start_download
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'keyword', 'target', 'save_dir', 'category_general', 'category_anime', 'category_people', 'purity_sfw', 'purity_sketchy', 'purity_nsfw', 'api_key')
+  - Constants: ('开始下载', '错误', '请输入搜索关键词！', None, '请输入有效的下载数量（正整数）！', '请选择保存位置！', '请至少选择一个图片分类！', '请至少选择一个内容分级！', '警告', '访问限制级 (NSFW) 内容需要提供 API Key！\n\n请在 wallhaven.cc 注册账号并获取 API Key。')
+
+------------------------------------------------------------
+Name: stop_download
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self',)
+  - Cannot extract code: 'gbk' codec can't encode character '\u23f8' in position 27: illegal multibyte sequence
+
+================================================================================
+Trying to inspect WallhavenGUI.__init__
+================================================================================
+__init__ parameters: ('self',)
+__init__ constants: ('dark', 'blue', 'Wallhaven 壁纸下载器', '900x1100', True, None, '<Left>', '<Right>', '<Up>', '<Down>')
+
+================================================================================
+Class: WallhavenDownloader
+================================================================================
+
+
+------------------------------------------------------------
+Name: PROPER_NOUNS
+Type: <class 'dict'>
+
+------------------------------------------------------------
+Name: collect_metadata
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'original_keyword', 'translated_keyword', 'was_translated', 'category_names', 'purity_names', 'page', 'collected', 'params', 'resp', 'data', 'e', 'items', 'item', 'img_url', 'thumb_url', 'ext')
+  - Cannot extract code: 'gbk' codec can't encode character '\U0001f310' in position 53: illegal multibyte sequence
+
+------------------------------------------------------------
+Name: contains_chinese
+Type: <class 'function'>
+Signature: (self, text)
+Code info:
+  - Arguments: ('self', 'text')
+  - Local vars: ('self', 'text')
+  - Constants: ('检测文本是否包含中文字符', '[\\u4e00-\\u9fff]')
+
+------------------------------------------------------------
+Name: log
+Type: <class 'function'>
+Signature: (self, message)
+Code info:
+  - Arguments: ('self', 'message')
+  - Local vars: ('self', 'message')
+  - Constants: ('发送日志消息到 GUI', None)
+
+------------------------------------------------------------
+Name: start
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self', 'e', 'meta', 'img_url', 'ext', 'index', 'filename', 'filepath', 'img_resp', 'f', 'chunk', 'progress')
+  - Cannot extract code: 'gbk' codec can't encode character '\U0001f4c1' in position 60: illegal multibyte sequence
+
+------------------------------------------------------------
+Name: stop
+Type: <class 'function'>
+Signature: (self)
+Code info:
+  - Arguments: ('self',)
+  - Local vars: ('self',)
+  - Constants: ('停止下载', False, None)
+
+------------------------------------------------------------
+Name: translate_to_english
+Type: <class 'function'>
+Signature: (self, text)
+Code info:
+  - Arguments: ('self', 'text')
+  - Local vars: ('self', 'text', 'translator', 'translated', 'e')
+  - Cannot extract code: 'gbk' codec can't encode character '\u26a0' in position 84: illegal multibyte sequence
+
+================================================================================
+Trying to inspect WallhavenDownloader.__init__
+================================================================================
+__init__ parameters: ('self', 'keyword', 'save_dir', 'target', 'callback', 'category_general', 'category_anime', 'category_people', 'purity_sfw', 'purity_sketchy', 'purity_nsfw', 'api_key', 'preview_ready_callback')
+__init__ constants: ('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'https://wallhaven.cc/api/v1/search', False, None)

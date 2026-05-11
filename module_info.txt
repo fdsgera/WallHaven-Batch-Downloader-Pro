@@ -1,0 +1,793 @@
+
+================================================================================
+Name: ConfigManager
+Type: <class 'type'>
+Source not available
+Methods: ['load_config', 'save_config']
+
+================================================================================
+Name: GoogleTranslator
+Type: <class 'abc.ABCMeta'>
+Source:
+class GoogleTranslator(BaseTranslator):
+    """
+    class that wraps functions, which use Google Translate under the hood to translate text(s)
+    """
+
+    def __init__(
+        self,
+        source: str = "auto",
+        target: str = "en",
+        proxies: Optional[dict] = None,
+        **kwargs
+    ):
+        """
+        @param source: source language to translate from
+        @param target: target language to translate to
+        """
+        self.proxies = proxies
+        super().__init__(
+            base_url=BASE_URLS.get("GOOGLE_TRANSLATE"),
+            source=source,
+            target=target,
+            element_tag="div",
+            element_query={"class": "t0"},
+            payload_key="q",  # key of text in the url
+            **kwargs
+        )
+
+        self._alt_element_query = {"class": "result-container"}
+
+    def translate(self, text: str, **kwargs) -> str:
+        """
+        function to translate a text
+        @param text: desired text to translate
+        @return: str: translated text
+        """
+        if is_input_valid(text, max_chars=5000):
+            text = text.strip()
+            if self._same_source_target() or is_empty(text):
+                return text
+            self._url_params["tl"] = self._target
+            self._url_params["sl"] = self._source
+
+            if self.payload_key:
+                self._url_params[self.payload_key] = text
+
+            response = requests.get(
+                self._base_url, params=self._url_params, proxies=self.proxies
+            )
+            if response.status_code == 429:
+                raise TooManyRequests()
+
+            if request_failed(status_code=response.status_code):
+                raise RequestError()
+
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            element = soup.find(self._element_tag, self._element_query)
+            response.close()
+
+            if not element:
+                element = soup.find(self._element_tag, self._alt_element_query)
+                if not element:
+                    raise TranslationNotFound(text)
+            if element.get_text(strip=True) == text.strip():
+                to_translate_alpha = "".join(
+                    ch for ch in text.strip() if ch.isalnum()
+                )
+                translated_alpha = "".join(
+                    ch for ch in element.get_text(strip=True) if ch.isalnum()
+                )
+                if (
+                    to_translate_alpha
+                    and translated_alpha
+                    and to_translate_alpha == translated_alpha
+                ):
+                    self._url_params["tl"] = self._target
+                    if "hl" not in self._url_params:
+                        return text.strip()
+                    del self._url_params["hl"]
+                    return self.translate(text)
+
+            else:
+                return element.get_text(strip=True)
+
+    def translate_file(self, path: str, **kwargs) -> str:
+        """
+        translate directly from file
+        @param path: path to the target file
+        @type path: str
+        @param kwargs: additional args
+        @return: str
+        """
+        return self._translate_file(path, **kwargs)
+
+    def translate_batch(self, batch: List[str], **kwargs) -> List[str]:
+        """
+        translate a list of texts
+        @param batch: list of texts you want to translate
+        @return: list of translations
+        """
+        return self._translate_batch(batch, **kwargs)
+
+
+================================================================================
+Name: Path
+Type: <class 'type'>
+Source:
+class Path(PurePath):
+    """PurePath subclass that can make system calls.
+
+    Path represents a filesystem path but unlike PurePath, also offers
+    methods to do system calls on path objects. Depending on your system,
+    instantiating a Path will return either a PosixPath or a WindowsPath
+    object. You can also instantiate a PosixPath or WindowsPath directly,
+    but cannot instantiate a WindowsPath on a POSIX system or vice versa.
+    """
+    __slots__ = ('_info',)
+
+    def __new__(cls, *args, **kwargs):
+        if cls is Path:
+            cls = WindowsPath if os.name == 'nt' else PosixPath
+        return object.__new__(cls)
+
+    @property
+    def info(self):
+        """
+        A PathInfo object that exposes the file type and other file attributes
+        of this path.
+        """
+        try:
+            return self._info
+        except AttributeError:
+            self._info = PathInfo(self)
+            return self._info
+
+    def stat(self, *, follow_symlinks=True):
+        """
+        Return the result of the stat() system call on this path, like
+        os.stat() does.
+        """
+        return os.stat(self, follow_symlinks=follow_symlinks)
+
+    def lstat(self):
+        """
+        Like stat(), except if the path points to a symlink, the symlink's
+        status information is returned, rather than its target's.
+        """
+        return os.lstat(self)
+
+    def exists(self, *, follow_symlinks=True):
+        """
+        Whether this path exists.
+
+        This method normally follows symlinks; to check whether a symlink exists,
+        add the argument follow_symlinks=False.
+        """
+        if follow_symlinks:
+            return os.path.exists(self)
+        return os.path.lexists(self)
+
+    def is_dir(self, *, follow_symlinks=True):
+        """
+        Whether this path is a directory.
+        """
+        if follow_symlinks:
+            return os.path.isdir(self)
+        try:
+            return S_ISDIR(self.stat(follow_symlinks=follow_symlinks).st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def is_file(self, *, follow_symlinks=True):
+        """
+        Whether this path is a regular file (also True for symlinks pointing
+        to regular files).
+        """
+        if follow_symlinks:
+            return os.path.isfile(self)
+        try:
+            return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def is_mount(self):
+        """
+        Check if this path is a mount point
+        """
+        return os.path.ismount(self)
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        return os.path.islink(self)
+
+    def is_junction(self):
+        """
+        Whether this path is a junction.
+        """
+        return os.path.isjunction(self)
+
+    def is_block_device(self):
+        """
+        Whether this path is a block device.
+        """
+        try:
+            return S_ISBLK(self.stat().st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def is_char_device(self):
+        """
+        Whether this path is a character device.
+        """
+        try:
+            return S_ISCHR(self.stat().st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def is_fifo(self):
+        """
+        Whether this path is a FIFO.
+        """
+        try:
+            return S_ISFIFO(self.stat().st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def is_socket(self):
+        """
+        Whether this path is a socket.
+        """
+        try:
+            return S_ISSOCK(self.stat().st_mode)
+        except (OSError, ValueError):
+            return False
+
+    def samefile(self, other_path):
+        """Return whether other_path is the same or not as this file
+        (as returned by os.path.samefile()).
+        """
+        st = self.stat()
+        try:
+            other_st = other_path.stat()
+        except AttributeError:
+            other_st = self.with_segments(other_path).stat()
+        return (st.st_ino == other_st.st_ino and
+                st.st_dev == other_st.st_dev)
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+        return io.open(self, mode, buffering, encoding, errors, newline)
+
+    def read_bytes(self):
+        """
+        Open the file in bytes mode, read it, and close the file.
+        """
+        with self.open(mode='rb', buffering=0) as f:
+            return f.read()
+
+    def read_text(self, encoding=None, errors=None, newline=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        # Call io.text_encoding() here to ensure any warning is raised at an
+        # appropriate stack level.
+        encoding = io.text_encoding(encoding)
+        with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+            return f.read()
+
+    def write_bytes(self, data):
+        """
+        Open the file in bytes mode, write to it, and close the file.
+        """
+        # type-check for the buffer interface before truncating the file
+        view = memoryview(data)
+        with self.open(mode='wb') as f:
+            return f.write(view)
+
+    def write_text(self, data, encoding=None, errors=None, newline=None):
+        """
+        Open the file in text mode, write to it, and close the file.
+        """
+        # Call io.text_encoding() here to ensure any warning is raised at an
+        # appropriate stack level.
+        encoding = io.text_encoding(encoding)
+        if not isinstance(data, str):
+            raise TypeError('data must be str, not %s' %
+                            data.__class__.__name__)
+        with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+            return f.write(data)
+
+    _remove_leading_dot = operator.itemgetter(slice(2, None))
+    _remove_trailing_slash = operator.itemgetter(slice(-1))
+
+    def _filter_trailing_slash(self, paths):
+        sep = self.parser.sep
+        anchor_len = len(self.anchor)
+        for path_str in paths:
+            if len(path_str) > anchor_len and path_str[-1] == sep:
+                path_str = path_str[:-1]
+            yield path_str
+
+    def _from_dir_entry(self, dir_entry, path_str):
+        path = self.with_segments(path_str)
+        path._str = path_str
+        path._info = DirEntryInfo(dir_entry)
+        return path
+
+    def iterdir(self):
+        """Yield path objects of the directory contents.
+
+        The children are yielded in arbitrary order, and the
+        special entries '.' and '..' are not included.
+        """
+        root_dir = str(self)
+        with os.scandir(root_dir) as scandir_it:
+            entries = list(scandir_it)
+        if root_dir == '.':
+            return (self._from_dir_entry(e, e.name) for e in entries)
+        else:
+            return (self._from_dir_entry(e, e.path) for e in entries)
+
+    def glob(self, pattern, *, case_sensitive=None, recurse_symlinks=False):
+        """Iterate over this subtree and yield all existing files (of any
+        kind, including directories) matching the given relative pattern.
+        """
+        sys.audit("pathlib.Path.glob", self, pattern)
+        if case_sensitive is None:
+            case_sensitive = self.parser is posixpath
+            case_pedantic = False
+        else:
+            # The user has expressed a case sensitivity choice, but we don't
+            # know the case sensitivity of the underlying filesystem, so we
+            # must use scandir() for everything, including non-wildcard parts.
+            case_pedantic = True
+        parts = self._parse_pattern(pattern)
+        recursive = True if recurse_symlinks else _no_recurse_symlinks
+        globber = _StringGlobber(self.parser.sep, case_sensitive, case_pedantic, recursive)
+        select = globber.selector(parts[::-1])
+        root = str(self)
+        paths = select(self.parser.join(root, ''))
+
+        # Normalize results
+        if root == '.':
+            paths = map(self._remove_leading_dot, paths)
+        if parts[-1] == '':
+            paths = map(self._remove_trailing_slash, paths)
+        elif parts[-1] == '**':
+            paths = self._filter_trailing_slash(paths)
+        paths = map(self._from_parsed_string, paths)
+        return paths
+
+    def rglob(self, pattern, *, case_sensitive=None, recurse_symlinks=False):
+        """Recursively yield all existing files (of any kind, including
+        directories) matching the given relative pattern, anywhere in
+        this subtree.
+        """
+        sys.audit("pathlib.Path.rglob", self, pattern)
+        pattern = self.parser.join('**', pattern)
+        return self.glob(pattern, case_sensitive=case_sensitive, recurse_symlinks=recurse_symlinks)
+
+    def walk(self, top_down=True, on_error=None, follow_symlinks=False):
+        """Walk the directory tree from this directory, similar to os.walk()."""
+        sys.audit("pathlib.Path.walk", self, on_error, follow_symlinks)
+        root_dir = str(self)
+        if not follow_symlinks:
+            follow_symlinks = os._walk_symlinks_as_files
+        results = os.walk(root_dir, top_down, on_error, follow_symlinks)
+        for path_str, dirnames, filenames in results:
+            if root_dir == '.':
+                path_str = path_str[2:]
+            yield self._from_parsed_string(path_str), dirnames, filenames
+
+    def absolute(self):
+        """Return an absolute version of this path
+        No normalization or symlink resolution is performed.
+
+        Use resolve() to resolve symlinks and remove '..' segments.
+        """
+        if self.is_absolute():
+            return self
+        if self.root:
+            drive = os.path.splitroot(os.getcwd())[0]
+            return self._from_parsed_parts(drive, self.root, self._tail)
+        if self.drive:
+            # There is a CWD on each drive-letter drive.
+            cwd = os.path.abspath(self.drive)
+        else:
+            cwd = os.getcwd()
+        if not self._tail:
+            # Fast path for "empty" paths, e.g. Path("."), Path("") or Path().
+            # We pass only one argument to with_segments() to avoid the cost
+            # of joining, and we exploit the fact that getcwd() returns a
+            # fully-normalized string by storing it in _str. This is used to
+            # implement Path.cwd().
+            return self._from_parsed_string(cwd)
+        drive, root, rel = os.path.splitroot(cwd)
+        if not rel:
+            return self._from_parsed_parts(drive, root, self._tail)
+        tail = rel.split(self.parser.sep)
+        tail.extend(self._tail)
+        return self._from_parsed_parts(drive, root, tail)
+
+    @classmethod
+    def cwd(cls):
+        """Return a new path pointing to the current working directory."""
+        cwd = os.getcwd()
+        path = cls(cwd)
+        path._str = cwd  # getcwd() returns a normalized path
+        return path
+
+    def resolve(self, strict=False):
+        """
+        Make the path absolute, resolving all symlinks on the way and also
+        normalizing it.
+        """
+
+        return self.with_segments(os.path.realpath(self, strict=strict))
+
+    if pwd:
+        def owner(self, *, follow_symlinks=True):
+            """
+            Return the login name of the file owner.
+            """
+            uid = self.stat(follow_symlinks=follow_symlinks).st_uid
+            return pwd.getpwuid(uid).pw_name
+    else:
+        def owner(self, *, follow_symlinks=True):
+            """
+            Return the login name of the file owner.
+            """
+            f = f"{type(self).__name__}.owner()"
+            raise UnsupportedOperation(f"{f} is unsupported on this system")
+
+    if grp:
+        def group(self, *, follow_symlinks=True):
+            """
+            Return the group name of the file gid.
+            """
+            gid = self.stat(follow_symlinks=follow_symlinks).st_gid
+            return grp.getgrgid(gid).gr_name
+    else:
+        def group(self, *, follow_symlinks=True):
+            """
+            Return the group name of the file gid.
+            """
+            f = f"{type(self).__name__}.group()"
+            raise UnsupportedOperation(f"{f} is unsupported on this system")
+
+    if hasattr(os, "readlink"):
+        def readlink(self):
+            """
+            Return the path to which the symbolic link points.
+            """
+            return self.with_segments(os.readlink(self))
+    else:
+        def readlink(self):
+            """
+            Return the path to which the symbolic link points.
+            """
+            f = f"{type(self).__name__}.readlink()"
+            raise UnsupportedOperation(f"{f} is unsupported on this system")
+
+    def touch(self, mode=0o666, exist_ok=True):
+        """
+        Create this file with the given access mode, if it doesn't exist.
+        """
+
+        if exist_ok:
+            # First try to bump modification time
+            # Implementation note: GNU touch uses the UTIME_NOW option of
+            # the utimensat() / futimens() functions.
+            try:
+                os.utime(self, None)
+            except OSError:
+                # Avoid exception chaining
+                pass
+            else:
+                return
+        flags = os.O_CREAT | os.O_WRONLY
+        if not exist_ok:
+            flags |= os.O_EXCL
+        fd = os.open(self, flags, mode)
+        os.close(fd)
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+            os.mkdir(self, mode)
+        except FileNotFoundError:
+            if not parents or self.parent == self:
+                raise
+            self.parent.mkdir(parents=True, exist_ok=True)
+            self.mkdir(mode, parents=False, exist_ok=exist_ok)
+        except OSError:
+            # Cannot rely on checking for EEXIST, since the operating system
+            # could give priority to other errors like EACCES or EROFS
+            if not exist_ok or not self.is_dir():
+                raise
+
+    def chmod(self, mode, *, follow_symlinks=True):
+        """
+        Change the permissions of the path, like os.chmod().
+        """
+        os.chmod(self, mode, follow_symlinks=follow_symlinks)
+
+    def lchmod(self, mode):
+        """
+        Like chmod(), except if the path points to a symlink, the symlink's
+        permissions are changed, rather than its target's.
+        """
+        self.chmod(mode, follow_symlinks=False)
+
+    def unlink(self, missing_ok=False):
+        """
+        Remove this file or link.
+        If the path is a directory, use rmdir() instead.
+        """
+        try:
+            os.unlink(self)
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
+
+    def rmdir(self):
+        """
+        Remove this directory.  The directory must be empty.
+        """
+        os.rmdir(self)
+
+    def _delete(self):
+        """
+        Delete this file or directory (including all sub-directories).
+        """
+        if self.is_symlink() or self.is_junction():
+            self.unlink()
+        elif self.is_dir():
+            # Lazy import to improve module import time
+            import shutil
+            shutil.rmtree(self)
+        else:
+            self.unlink()
+
+    def rename(self, target):
+        """
+        Rename this path to the target path.
+
+        The target path may be absolute or relative. Relative paths are
+        interpreted relative to the current working directory, *not* the
+        directory of the Path object.
+
+        Returns the new Path instance pointing to the target path.
+        """
+        os.rename(self, target)
+        if not hasattr(target, 'with_segments'):
+            target = self.with_segments(target)
+        return target
+
+    def replace(self, target):
+        """
+        Rename this path to the target path, overwriting if that path exists.
+
+        The target path may be absolute or relative. Relative paths are
+        interpreted relative to the current working directory, *not* the
+        directory of the Path object.
+
+        Returns the new Path instance pointing to the target path.
+        """
+        os.replace(self, target)
+        if not hasattr(target, 'with_segments'):
+            target = self.with_segments(target)
+        return target
+
+    def copy(self, target, **kwargs):
+        """
+        Recursively copy this file or directory tree to the given destination.
+        """
+        if not hasattr(target, 'with_segments'):
+            target = self.with_segments(target)
+        ensure_distinct_paths(self, target)
+        target._copy_from(self, **kwargs)
+        return target.joinpath()  # Empty join to ensure fresh metadata.
+
+    def copy_into(self, target_dir, **kwargs):
+        """
+        Copy this file or directory tree into the given existing directory.
+        """
+        name = self.name
+        if not name:
+            raise ValueError(f"{self!r} has an empty name")
+        elif hasattr(target_dir, 'with_segments'):
+            target = target_dir / name
+        else:
+            target = self.with_segments(target_dir, name)
+        return self.copy(target, **kwargs)
+
+    def _copy_from(self, source, follow_symlinks=True, preserve_metadata=False):
+        """
+        Recursively copy the given path to this path.
+        """
+        if not follow_symlinks and source.info.is_symlink():
+            self._copy_from_symlink(source, preserve_metadata)
+        elif source.info.is_dir():
+            children = source.iterdir()
+            os.mkdir(self)
+            for child in children:
+                self.joinpath(child.name)._copy_from(
+                    child, follow_symlinks, preserve_metadata)
+            if preserve_metadata:
+                copy_info(source.info, self)
+        else:
+            self._copy_from_file(source, preserve_metadata)
+
+    def _copy_from_file(self, source, preserve_metadata=False):
+        ensure_different_files(source, self)
+        with magic_open(source, 'rb') as source_f:
+            with open(self, 'wb') as target_f:
+                copyfileobj(source_f, target_f)
+        if preserve_metadata:
+            copy_info(source.info, self)
+
+    if copyfile2:
+        # Use fast OS routine for local file copying where available.
+        _copy_from_file_fallback = _copy_from_file
+        def _copy_from_file(self, source, preserve_metadata=False):
+            try:
+                source = os.fspath(source)
+            except TypeError:
+                pass
+            else:
+                copyfile2(source, str(self))
+                return
+            self._copy_from_file_fallback(source, preserve_metadata)
+
+    if os.name == 'nt':
+        # If a directory-symlink is copied *before* its target, then
+        # os.symlink() incorrectly creates a file-symlink on Windows. Avoid
+        # this by passing *target_is_dir* to os.symlink() on Windows.
+        def _copy_from_symlink(self, source, preserve_metadata=False):
+            os.symlink(str(source.readlink()), self, source.info.is_dir())
+            if preserve_metadata:
+                copy_info(source.info, self, follow_symlinks=False)
+    else:
+        def _copy_from_symlink(self, source, preserve_metadata=False):
+            os.symlink(str(source.readlink()), self)
+            if preserve_metadata:
+                copy_info(source.info, self, follow_symlinks=False)
+
+    def move(self, target):
+        """
+        Recursively move this file or directory tree to the given destination.
+        """
+        # Use os.replace() if the target is os.PathLike and on the same FS.
+        try:
+            target = self.with_segments(target)
+        except TypeError:
+            pass
+        else:
+            ensure_different_files(self, target)
+            try:
+                os.replace(self, target)
+            except OSError as err:
+                if err.errno != EXDEV:
+                    raise
+            else:
+                return target.joinpath()  # Empty join to ensure fresh metadata.
+        # Fall back to copy+delete.
+        target = self.copy(target, follow_symlinks=False, preserve_metadata=True)
+        self._delete()
+        return target
+
+    def move_into(self, target_dir):
+        """
+        Move this file or directory tree into the given existing directory.
+        """
+        name = self.name
+        if not name:
+            raise ValueError(f"{self!r} has an empty name")
+        elif hasattr(target_dir, 'with_segments'):
+            target = target_dir / name
+        else:
+            target = self.with_segments(target_dir, name)
+        return self.move(target)
+
+    if hasattr(os, "symlink"):
+        def symlink_to(self, target, target_is_directory=False):
+            """
+            Make this path a symlink pointing to the target path.
+            Note the order of arguments (link, target) is the reverse of os.symlink.
+            """
+            os.symlink(target, self, target_is_directory)
+    else:
+        def symlink_to(self, target, target_is_directory=False):
+            """
+            Make this path a symlink pointing to the target path.
+            Note the order of arguments (link, target) is the reverse of os.symlink.
+            """
+            f = f"{type(self).__name__}.symlink_to()"
+            raise UnsupportedOperation(f"{f} is unsupported on this system")
+
+    if hasattr(os, "link"):
+        def hardlink_to(self, target):
+            """
+            Make this path a hard link pointing to the same file as *target*.
+
+            Note the order of arguments (self, target) is the reverse of os.link's.
+            """
+            os.link(target, self)
+    else:
+        def hardlink_to(self, target):
+            """
+            Make this path a hard link pointing to the same file as *target*.
+
+            Note the order of arguments (self, target) is the reverse of os.link's.
+            """
+            f = f"{type(self).__name__}.hardlink_to()"
+            raise UnsupportedOperation(f"{f} is unsupported on this system")
+
+    def expanduser(self):
+        """ Return a new path with expanded ~ and ~user constructs
+        (as returned by os.path.expanduser)
+        """
+        if (not (self.drive or self.root) and
+            self._tail and self._tail[0][:1] == '~'):
+            homedir = os.path.expanduser(self._tail[0])
+            if homedir[:1] == "~":
+                raise RuntimeError("Could not determine home directory.")
+            drv, root, tail = self._parse_path(homedir)
+            return self._from_parsed_parts(drv, root, tail + self._tail[1:])
+
+        return self
+
+    @classmethod
+    def home(cls):
+        """Return a new path pointing to expanduser('~').
+        """
+        homedir = os.path.expanduser("~")
+        if homedir == "~":
+            raise RuntimeError("Could not determine home directory.")
+        return cls(homedir)
+
+    def as_uri(self):
+        """Return the path as a URI."""
+        if not self.is_absolute():
+            raise ValueError("relative paths can't be expressed as file URIs")
+        from urllib.request import pathname2url
+        return pathname2url(str(self), add_scheme=True)
+
+    @classmethod
+    def from_uri(cls, uri):
+        """Return a new path from the given 'file' URI."""
+        from urllib.error import URLError
+        from urllib.request import url2pathname
+        try:
+            path = cls(url2pathname(uri, require_scheme=True))
+        except URLError as exc:
+            raise ValueError(exc.reason) from None
+        if not path.is_absolute():
+            raise ValueError(f"URI is not absolute: {uri!r}")
+        return path
+
+
+================================================================================
+Name: WallhavenDownloader
+Type: <class 'type'>
+Source not available
+Methods: ['PROPER_NOUNS', 'collect_metadata', 'contains_chinese', 'log', 'start', 'stop', 'translate_to_english']
+
+================================================================================
+Name: WallhavenGUI
+Type: <class 'type'>
+Source not available
+Methods: ['browse_folder', 'build_ui', 'load_last_config', 'log_message', 'run', 'save_current_config', 'show_current_image', 'show_next_image', 'show_previous_image', 'start_download', 'stop_download']

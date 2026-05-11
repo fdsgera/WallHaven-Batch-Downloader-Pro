@@ -1,0 +1,195 @@
+================================================================================
+WallhavenGUI.show_current_image 字节码:
+================================================================================
+897           RESUME                   0
+
+899           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                0 (downloader)
+              TO_BOOL
+              POP_JUMP_IF_FALSE       29 (to L1)
+              NOT_TAKEN
+              LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                0 (downloader)
+              LOAD_ATTR                2 (image_metadata)
+              TO_BOOL
+              POP_JUMP_IF_TRUE         3 (to L2)
+              NOT_TAKEN
+
+900   L1:     LOAD_CONST               1 (None)
+              RETURN_VALUE
+
+902   L2:     LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                0 (downloader)
+              LOAD_ATTR                2 (image_metadata)
+              STORE_FAST               1 (metadata)
+
+903           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                4 (current_preview_index)
+              LOAD_GLOBAL              7 (len + NULL)
+              LOAD_FAST_BORROW         1 (metadata)
+              CALL                     1
+              COMPARE_OP             188 (bool(>=))
+              POP_JUMP_IF_FALSE        3 (to L3)
+              NOT_TAKEN
+
+904           LOAD_CONST               1 (None)
+              RETURN_VALUE
+
+906   L3:     LOAD_FAST_BORROW_LOAD_FAST_BORROW 16 (metadata, self)
+              LOAD_ATTR                4 (current_preview_index)
+              BINARY_OP               26 ([])
+              STORE_FAST               2 (current_meta)
+
+907           LOAD_FAST_BORROW         2 (current_meta)
+              LOAD_ATTR                9 (get + NULL|self)
+              LOAD_CONST               2 ('thumb')
+              LOAD_CONST               3 ('')
+              CALL                     2
+              STORE_FAST               3 (thumb_url)
+
+908           LOAD_FAST_BORROW         2 (current_meta)
+              LOAD_ATTR                9 (get + NULL|self)
+              LOAD_CONST               4 ('index')
+              LOAD_SMALL_INT           0
+              CALL                     2
+              STORE_FAST               4 (index)
+
+911           LOAD_GLOBAL              7 (len + NULL)
+              LOAD_FAST_BORROW         1 (metadata)
+              CALL                     1
+              STORE_FAST               5 (total)
+
+912           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               10 (preview_info_label)
+              LOAD_ATTR               13 (configure + NULL|self)
+
+913           LOAD_CONST               5 ('正在预览：第 ')
+              LOAD_FAST_BORROW         4 (index)
+              FORMAT_SIMPLE
+              LOAD_CONST               6 ('/')
+              LOAD_FAST_BORROW         5 (total)
+              FORMAT_SIMPLE
+              LOAD_CONST               7 (' 张')
+              BUILD_STRING             5
+
+912           LOAD_CONST               8 (('text',))
+              CALL_KW                  1
+              POP_TOP
+
+917           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                4 (current_preview_index)
+              LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               14 (preview_image_cache)
+              CONTAINS_OP              0 (in)
+              POP_JUMP_IF_FALSE       61 (to L4)
+              NOT_TAKEN
+
+918           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               14 (preview_image_cache)
+              LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR                4 (current_preview_index)
+              BINARY_OP               26 ([])
+              STORE_FAST               6 (photo)
+
+919           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               16 (preview_canvas)
+              LOAD_ATTR               13 (configure + NULL|self)
+              LOAD_FAST_BORROW         6 (photo)
+              LOAD_CONST               3 ('')
+              LOAD_CONST               9 (('image', 'text'))
+              CALL_KW                  2
+              POP_TOP
+              LOAD_CONST               1 (None)
+              RETURN_VALUE
+
+922   L4:     LOAD_GLOBAL             18 (threading)
+              LOAD_ATTR               20 (Thread)
+              PUSH_NULL
+
+923           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               22 (_load_preview_image)
+
+924           LOAD_FAST_BORROW_LOAD_FAST_BORROW 48 (thumb_url, self)
+              LOAD_ATTR                4 (current_preview_index)
+              BUILD_TUPLE              2
+
+925           LOAD_CONST              10 (True)
+
+922           LOAD_CONST              11 (('target', 'args', 'daemon'))
+              CALL_KW                  3
+
+926           LOAD_ATTR               25 (start + NULL|self)
+              CALL                     0
+              POP_TOP
+
+927           LOAD_FAST_BORROW         0 (self)
+              LOAD_ATTR               16 (preview_canvas)
+              LOAD_ATTR               13 (configure + NULL|self)
+              LOAD_CONST              12 ('加载中...')
+              LOAD_CONST               8 (('text',))
+              CALL_KW                  1
+              POP_TOP
+              LOAD_CONST               1 (None)
+              RETURN_VALUE
+
+================================================================================
+WallhavenDownloader.start 字节码:
+================================================================================
+ 338            RESUME                   0
+
+ 340            LOAD_CONST               1 (True)
+                LOAD_FAST_BORROW         0 (self)
+                STORE_ATTR               0 (is_running)
+
+ 341            LOAD_SMALL_INT           0
+                LOAD_FAST_BORROW         0 (self)
+                STORE_ATTR               1 (downloaded)
+
+ 342            LOAD_SMALL_INT           0
+                LOAD_FAST_BORROW         0 (self)
+                STORE_ATTR               2 (skipped)
+
+ 345            NOP
+
+ 346    L1:     LOAD_GLOBAL              6 (os)
+                LOAD_ATTR                8 (makedirs)
+                PUSH_NULL
+                LOAD_FAST_BORROW         0 (self)
+                LOAD_ATTR               10 (save_dir)
+                LOAD_CONST               1 (True)
+                LOAD_CONST               2 (('exist_ok',))
+                CALL_KW                  2
+                POP_TOP
+
+ 347            LOAD_FAST_BORROW         0 (self)
+                LOAD_ATTR               13 (log + NULL|self)
+Traceback (most recent call last):
+  File "c:\Users\13640\Desktop\下载原\WallHaven-Batch-Downloader-Pro-1.0.0\disassemble_methods.py", line 22, in <module>
+    dis.dis(WallhavenDownloader.start)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 123, in dis
+    _disassemble_recursive(x, file=file, depth=depth, show_caches=show_caches, adaptive=adaptive, show_offsets=show_offsets, show_positions=show_positions)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 836, in _disassemble_recursive
+    disassemble(co, file=file, show_caches=show_caches, adaptive=adaptive, show_offsets=show_offsets, show_positions=show_positions)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 831, in disassemble
+    _disassemble_bytes(_get_code_array(co, adaptive), lasti, linestarts,
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       exception_entries=exception_entries, co_positions=co.co_positions(),
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       original_code=co.co_code, arg_resolver=arg_resolver, formatter=formatter)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 910, in _disassemble_bytes
+    print_instructions(instrs, exception_entries, formatter, lasti=lasti)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 918, in print_instructions
+    formatter.print_instruction(instr, is_current_instr)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 464, in print_instruction
+    self.print_instruction_line(instr, mark_as_current)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13640\AppData\Local\Python\pythoncore-3.14-64\Lib\dis.py", line 542, in print_instruction_line
+    print(' '.join(fields).rstrip(), file=self.file)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4c1' in position 47: illegal multibyte sequence
